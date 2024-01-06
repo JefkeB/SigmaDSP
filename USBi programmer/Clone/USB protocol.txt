@@ -1,0 +1,47 @@
+https://www.diyaudio.com/community/threads/low-cost-usbi-programmer-using-cypress-cy7c68013a-board.269111/page-2
+
+    2018-03-06 2:47 pm 
+
+    #30
+
+Hi Guys,
+for those willing to access the SigmaDSP from SigmaStudio without using an USBi interface, 
+there is a possibility by creating an USB device with a generic "Vendor Specific Class (0xFF)" 
+as long as you support the following "Vendor Commands":
+
+B2 : Write a list of bytes at a given memory address, for a given I2C or SPI device.
+B4 : Read a list of bytes at a predefined memory address, for a given I2C or SPI device.
+B3 : Set the predefined adress for command B4
+B5 : finalize a B2 transaction
+B6 : finalize a B4 transaction
+
+at least SigmaStudio uses all these command trough the Cypress USB Stack
+this has been discovered by using USBPcap and Wiresharc tools.
+in order to recreate a USB device able to handle this Vendor Command, it is possible to leverage 
+the Cypress Vendor_ax source code (may be my next step).
+
+it is possible to test these commands within the CyConsole program with an USBi device attached.
+
+Here are more details on the commands which are following the "setup" structure of the USB ep0: bRequest, wValue, wIndex, wLength
+
+for both command B5 and B6, wValue=0x0000, wIndex=0x0000, wLength=0x0001
+the DATA to be provided for OUT is byte 0x01.
+
+For commands B2 B3 B4:
+
+wValue is representing the I2C slave address.
+For example, with EVAL-1701, the ADAU1701 I2C adress is 0x68 and then you should put wValue=0x34.
+With EVAL-1452 this is SPI and then you have to use wValue=0x0000
+
+wIndex is representing I2C or SPI. For I2C, wIndex=0x0100, for SPI, wIndex=0x0101
+
+wLength depends on the Payload attached to the command:
+
+for B2 it is 2+number of byte to write and the Data should then be 2 byte representing the target dress and N bytes to write.
+
+For B3 it is always 2 as the Data should be the 2 bytes representing the address to start reading from (by B4)
+
+for B4 this is the number of byte your expect to read.
+
+and thats all. I might provide more details or screenshot but if you are interested in creating your own 
+USB device you will have to deep dive on "vendor command" structure and ep0 and then what s written here will become clear to you
